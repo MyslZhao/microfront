@@ -16,7 +16,11 @@ onMounted(async () => {
 </script>
 
 <template>
+  <!-- NOTE: Test starts -->
   <main>
     <h1>{{ message }}</h1>
+    <input id="test_msg" />
+    <button type="submit">提交</button>
   </main>
+  <!-- NOTE: Test ends -->
 </template>
