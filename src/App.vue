@@ -196,15 +196,13 @@ const drawPlot = () => {
   ctx.value.lineWidth = 2
 
   points.value.forEach((p, index) => {
-    // 1. 数据坐标 → 画布基础坐标（缩放+平移）
-    let x = originX + p.x * currentScale
-    let y = originY - p.y * currentScale
+    // 1. 在数学坐标系中旋转（绕原点）
+    const mathX = p.x * Math.cos(rotAngle) - p.y * Math.sin(rotAngle)
+    const mathY = p.x * Math.sin(rotAngle) + p.y * Math.cos(rotAngle)
 
-    // 2. 应用平面旋转（绕原点旋转，修复之前的3D旋转bug）
-    const dx = x - originX
-    const dy = y - originY
-    x = originX + dx * Math.cos(rotAngle) - dy * Math.sin(rotAngle)
-    y = originY + dx * Math.sin(rotAngle) + dy * Math.cos(rotAngle)
+    // 2. 数学坐标 → Canvas 坐标（缩放+平移）
+    const x = originX + mathX * currentScale
+    const y = originY - mathY * currentScale
 
     // 3. 绘制路径
     if (index === 0) {
@@ -301,15 +299,13 @@ const drawAnnotations = (originX, originY, scale, rotAngle) => {
   // 找极大值点(1.283, 3.261)
   const maxPoint = points.value.find(p => Math.abs(p.x - 1.283) < 0.01)
   if (maxPoint) {
-    // 基础坐标
-    let x = originX + maxPoint.x * scale
-    let y = originY - maxPoint.y * scale
+    // 1. 在数学坐标系中旋转
+    const mathX = maxPoint.x * Math.cos(rotAngle) - maxPoint.y * Math.sin(rotAngle)
+    const mathY = maxPoint.x * Math.sin(rotAngle) + maxPoint.y * Math.cos(rotAngle)
 
-    // 应用旋转
-    const dx = x - originX
-    const dy = y - originY
-    x = originX + dx * Math.cos(rotAngle) - dy * Math.sin(rotAngle)
-    y = originY + dx * Math.sin(rotAngle) + dy * Math.cos(rotAngle)
+    // 2. 数学坐标 → Canvas 坐标
+    const x = originX + mathX * scale
+    const y = originY - mathY * scale
 
     // 绘制红点和标注
     ctx.value.fillStyle = '#ff6b6b'
@@ -361,12 +357,13 @@ const handleMouseMoveAndShowCoords = (e) => {
   const originY = canvasHeight / 2 + offset.value.y
   const currentScale = scale.value
   const rotAngle = rotation.value * Math.PI / 180
-  
-  // 转换为数据坐标（考虑旋转）
-  const dx = mouseX - originX
-  const dy = mouseY - originY
-  const dataX = (dx * Math.cos(-rotAngle) - dy * Math.sin(-rotAngle)) / currentScale
-  const dataY = (dx * Math.sin(-rotAngle) + dy * Math.cos(-rotAngle)) / currentScale
+
+  // Canvas 坐标 → 数学坐标（先反旋转，再反缩放）
+  // 反旋转（绕原点逆旋转 -rotAngle）
+  const mathXFromCanvas = mouseX - originX
+  const mathYFromCanvas = originY - mouseY
+  const dataX = (mathXFromCanvas * Math.cos(-rotAngle) - mathYFromCanvas * Math.sin(-rotAngle)) / currentScale
+  const dataY = (mathXFromCanvas * Math.sin(-rotAngle) + mathYFromCanvas * Math.cos(-rotAngle)) / currentScale
   
   // 找到最近的函数点（扩大搜索范围）
   let closestPoint = null
@@ -383,13 +380,11 @@ const handleMouseMoveAndShowCoords = (e) => {
   
   if (closestPoint) {
     // 计算旋转后的屏幕坐标用于显示
-    let screenX = originX + closestPoint.x * scale
-    let screenY = originY - closestPoint.y * scale
-    const pdx = screenX - originX
-    const pdy = screenY - originY
-    screenX = originX + pdx * Math.cos(rotAngle) - pdy * Math.sin(rotAngle)
-    screenY = originY + pdx * Math.sin(rotAngle) + pdy * Math.cos(rotAngle)
-    
+    const mathX = closestPoint.x * Math.cos(rotAngle) - closestPoint.y * Math.sin(rotAngle)
+    const mathY = closestPoint.x * Math.sin(rotAngle) + closestPoint.y * Math.cos(rotAngle)
+    const screenX = originX + mathX * scale
+    const screenY = originY - mathY * scale
+
     tooltipX.value = closestPoint.x
     tooltipY.value = closestPoint.y
     showTooltip.value = true
@@ -551,5 +546,4 @@ canvas:active {
   box-shadow: 0 0 10px rgba(0, 255, 128, 0.3);
 }
 </style>
-
 
